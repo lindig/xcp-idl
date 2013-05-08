@@ -300,8 +300,12 @@ let mkdir_rec dir perm =
 		(try Unix.mkdir dir perm  with Unix.Unix_error(Unix.EEXIST, _, _) -> ()) in
 	p_mkdir dir
 
+type server =
+  | Socket of Unix.file_descr * (Unix.file_descr -> unit)
+  | Queue of string * (Rpc.call -> Rpc.response)
+
 (* Start accepting connections on sockets before we daemonize *)
-let listen path =
+let make_socket_server path fn =
 	(* Check the sockets-group exists *)
 	if try ignore(Unix.getgrnam !sockets_group); false with _ -> true then begin
 		error "Group %s doesn't exist." !sockets_group;
@@ -317,7 +321,7 @@ let listen path =
 		Unix.bind sock (Unix.ADDR_UNIX path);
 		Unix.listen sock 5;
 		info "Listening on %s" path;
-		sock
+		Socket (sock, fn)
 	with e ->
 		error "Failed to listen on Unix domain socket %s. Raw error was: %s" path (Printexc.to_string e);
 		begin match e with
@@ -332,6 +336,30 @@ let listen path =
 		end;
 		raise e
 
+let make_queue_server name fn =
+	Queue(name, fn) (* TODO: connect to the message switch *)
+
+let make ~path ~queue_name ~raw_fn ~rpc_fn =
+	if !Xcp_client.use_switch
+	then make_queue_server queue_name rpc_fn
+	else make_socket_server path raw_fn
+
+let serve_forever = function
+	| Socket(listening_sock, fn) ->
+		while true do
+			let this_connection, _ = Unix.accept listening_sock in
+			let (_: Thread.t) = Thread.create
+				(fun () ->
+					finally
+						(fun () -> fn this_connection)
+						(fun () -> Unix.close this_connection)
+				) () in
+			()
+		done
+	| Queue(queue_name, fn) ->
+		let process x = Jsonrpc.string_of_response (fn (Jsonrpc.call_of_string x)) in
+		let c = Protocol_unix.IO.connect !Xcp_client.switch_port in
+		Protocol_unix.Server.listen process c queue_name
 
 let pidfile_write filename =
 	let fd = Unix.openfile filename
