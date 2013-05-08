@@ -82,6 +82,8 @@ let pidfile = ref (Printf.sprintf "/var/run/%s.pid" default_service_name)
 let log_destination = ref "syslog:daemon"
 let daemon = ref false
 
+let common_prefix = "org/xen/xcp/"
+
 module D = Debug.Make(struct let name = default_service_name end)
 open D
 
@@ -142,6 +144,8 @@ module Config_file = struct
 end
 
 let common_options = [
+	"use-switch", Arg.Bool (fun b -> Xcp_client.use_switch := b), (fun () -> string_of_bool !Xcp_client.use_switch), "true if the message switch is to be enabled";
+	"switch-port", Arg.Set_int Xcp_client.switch_port, (fun () -> string_of_int !Xcp_client.switch_port), "port on localhost where the message switch is listening";
 	"sockets-group", Arg.Set_string sockets_group, (fun () -> !sockets_group), "Group to allow access to the control socket";
 	"pidfile", Arg.Set_string pidfile, (fun () -> !pidfile), "Filename to write process PID";
 	"log", Arg.Set_string log_destination, (fun () -> !log_destination), "Where to write log messages";
