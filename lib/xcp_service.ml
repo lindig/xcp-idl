@@ -82,7 +82,7 @@ let pidfile = ref (Printf.sprintf "/var/run/%s.pid" default_service_name)
 let log_destination = ref "syslog:daemon"
 let daemon = ref false
 
-let common_prefix = "org/xen/xcp/"
+let common_prefix = "org.xen.xcp."
 
 module D = Debug.Make(struct let name = default_service_name end)
 open D
