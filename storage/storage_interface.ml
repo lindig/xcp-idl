@@ -41,6 +41,7 @@ type debug_info = string
 	connect a VBD backend to a VBD frontend *)
 type attach_info = {
 	params : string;
+	backend: string option; (** the backend service name (e.g. 'vbd' 'vbd3' 'qdisk') *)
 	xenstore_data : (string * string) list;
 }
 
