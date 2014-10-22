@@ -23,6 +23,61 @@ module Mutex = struct
     r
 end
 
+module Backtrace = struct
+
+  type backtrace = string (* < OCaml 4.02.0 *)
+
+  type t = {
+    backtraces: backtrace array;
+    exn_to_backtrace: exn Weak.t;
+    mutable producer: int; (* free running counter *)
+    m: Mutex.t;
+  }
+
+  (* Increasing this makes 'find_all' slower and increases the amount of
+     memory needed. We maybe should make this a thread-local table. *)
+  let max_backtraces = 100
+
+  let make () =
+    let backtraces = Array.create max_backtraces "" in
+    let exn_to_backtrace = Weak.create max_backtraces in
+    let producer = 0 in (* free running *)
+    let m = Mutex.create () in
+    { backtraces; exn_to_backtrace; producer; m }
+
+  let add t exn =
+    Mutex.execute t.m
+      (fun () ->
+        let bt = Printexc.get_backtrace () in
+        (* Deliberately clear the backtrace buffer *)
+        (try raise Not_found with Not_found -> ());
+        let slot = t.producer mod max_backtraces in
+        t.producer <- t.producer + 1;
+        Weak.set t.exn_to_backtrace slot (Some exn);
+        t.backtraces.(slot) <- bt;
+      )
+
+  let remove_all t exn =
+    (* work backwards from most recent backtrace, building the list
+       in reverse *)
+    let rec loop acc from =
+      if from < 0 || t.producer - from > max_backtraces
+      then acc
+      else
+        let slot = from mod max_backtraces in
+        match Weak.get t.exn_to_backtrace slot with
+        | Some exn' when exn' = exn ->
+          let bt = t.backtraces.(slot) in
+          Weak.set t.exn_to_backtrace slot None;
+          loop (bt :: acc) (from - 1)
+        | _ -> loop acc (from - 1) in
+    loop [] (t.producer - 1)
+end
+
+let global_backtraces = Backtrace.make ()
+
+let backtrace_is_important = Backtrace.add global_backtraces
+
 (** Associate a task with each active thread *)
 let thread_tasks : (int, string) Hashtbl.t = Hashtbl.create 256 
 let thread_tasks_m = Mutex.create ()
@@ -157,6 +212,8 @@ module type DEBUG = sig
 	val log_backtrace : unit -> unit
 
 	val log_and_ignore_exn : (unit -> unit) -> unit
+
+	val backtrace: exn -> unit
 end
 
 module Make = functor(Brand: BRAND) -> struct
@@ -219,4 +276,13 @@ module Make = functor(Brand: BRAND) -> struct
 	let log_and_ignore_exn f =
 		try f () with _ -> log_backtrace ()
 
+	let backtrace exn =
+		let all = Backtrace.remove_all global_backtraces exn in
+		let all' = List.length all in
+		let rec loop i = function
+		| [] -> ()
+		| x :: xs ->
+			debug "backtrace %d/%d: %s" i all' x;
+			loop (i + 1) xs in
+		loop 1 all
 end

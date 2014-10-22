@@ -79,6 +79,12 @@ module type DEBUG = sig
 	val log_backtrace : unit -> unit
 
 	val log_and_ignore_exn : (unit -> unit) -> unit
+
+	val backtrace: exn -> unit
 end
 
 module Make : functor (Brand : BRAND) -> DEBUG
+
+val backtrace_is_important: exn -> unit
+(** Declare that the backtrace is important for debugging and should be preserved.
+    The default is to throw away backtraces for speed. *)
