@@ -19,20 +19,13 @@ val invalidate_hostname_cache: unit -> unit
 
 (** {2 Associate a task to the current actions} *)
 
-(** Associate a task name to the current thread *)
-val associate_thread_with_task : string -> unit
-
-(** Dissociate a task name to the current thread *)
-val dissociate_thread_from_task : unit -> unit
-
 (** Do an action with a task name associated with the current thread *)
 val with_thread_associated : string -> ('a -> 'b) -> 'a -> 'b
 
 (** {2 Associate a name to the current thread} *)
 
-val name_thread : string -> unit
-
-val remove_thread_name : unit -> unit
+(** Do an action with a name associated with the current thread *)
+val with_thread_named : string -> ('a -> 'b) -> 'a -> 'b
 
 val get_all_debug_keys : unit -> string list
 
@@ -79,8 +72,6 @@ module type DEBUG = sig
 	val log_backtrace : unit -> unit
 
 	val log_and_ignore_exn : (unit -> unit) -> unit
-
-	val backtrace: exn -> unit
 end
 
 module Make : functor (Brand : BRAND) -> DEBUG
