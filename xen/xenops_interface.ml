@@ -68,6 +68,7 @@ exception Hook_failed of (string * string * string * string)
 exception Not_enough_memory of int64
 exception Cancelled of string
 exception Storage_backend_error of (string * (string list))
+
 exception PCIBack_not_loaded
 
 type debug_info = string
@@ -354,6 +355,7 @@ module Task = struct
 		state: state;
 		subtasks: (string * state) list;
 		debug_info: (string * string) list;
+		trace: string list;
 	}
 end
 
@@ -495,4 +497,3 @@ module DEBUG = struct
 	external trigger: debug_info -> string -> string list -> unit = ""
 	external shutdown: debug_info -> unit -> unit = ""
 end
-
