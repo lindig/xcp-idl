@@ -56,81 +56,6 @@ end
 let hostname = Cache.make Unix.gethostname
 let invalidate_hostname_cache () = Cache.invalidate hostname
 
-let rec split_c c str =
-  try
-    let i = String.index str c in
-    String.sub str 0 i :: (split_c c (String.sub str (i+1) (String.length str - i - 1)))
-  with Not_found -> [str]
-    
-module Backtrace = struct
-
-  type backtrace = string list (* < OCaml 4.02.0 *)
-
-  type t = {
-    backtraces: backtrace array;
-    exn_to_backtrace: exn Weak.t;
-    mutable producer: int; (* free running counter *)
-    m: Mutex.t;
-  }
-
-  (* Increasing this makes 'find_all' slower and increases the amount of
-     memory needed. We maybe should make this a thread-local table. *)
-  let max_backtraces = 100
-
-  let get_backtrace_401 () =
-    Printexc.get_backtrace ()
-    |> split_c '\n'
-    |> List.filter (fun x -> x <> "")
-
-  let make () =
-    let backtraces = Array.make max_backtraces [] in
-    let exn_to_backtrace = Weak.create max_backtraces in
-    let producer = 0 in (* free running *)
-    let m = Mutex.create () in
-    { backtraces; exn_to_backtrace; producer; m }
-
-  let add t exn =
-    Mutex.execute t.m
-      (fun () ->
-        let bt = get_backtrace_401 () in
-        (* Deliberately clear the backtrace buffer *)
-        (try raise Not_found with Not_found -> ());
-        let slot = t.producer mod max_backtraces in
-        t.producer <- t.producer + 1;
-        Weak.set t.exn_to_backtrace slot (Some exn);
-        t.backtraces.(slot) <- bt;
-      )
-
-  (* fold over the slots matching exn *)
-  let fold t exn f initial =
-    let rec loop acc from =
-      if from < 0 || t.producer - from > max_backtraces
-      then acc
-      else
-        let slot = from mod max_backtraces in
-        match Weak.get t.exn_to_backtrace slot with
-        | Some exn' when exn' = exn ->
-          loop (f acc slot) (from - 1)
-        | _ ->
-          loop acc (from - 1) in
-    loop initial (t.producer - 1)
-
-  let find_all t exn =
-    fold t exn (fun acc slot -> t.backtraces.(slot) :: acc) [] |> List.concat
-
-  let remove_all t exn =
-    fold t exn (fun acc slot ->
-        let bt = t.backtraces.(slot) in
-        Weak.set t.exn_to_backtrace slot None;
-        t.backtraces.(slot) <- [];
-        bt :: acc
-    ) [] |> List.concat
-end
-
-let global_backtraces = Backtrace.make ()
-
-let backtrace_is_important = Backtrace.add global_backtraces
-
 let get_thread_id () =
     try Thread.id (Thread.self ()) with _ -> -1 
 
@@ -210,8 +135,8 @@ let output_log brand level priority s =
   end
 
 let log_backtrace exn =
-  backtrace_is_important exn;
-  let all = Backtrace.remove_all global_backtraces exn in
+  Backtrace.is_important exn;
+  let all = Backtrace.remove exn in
   let all' = List.length all in
   let rec loop i = function
   | [] -> ()
@@ -220,8 +145,6 @@ let log_backtrace exn =
     loop (i + 1) xs in
   output_log "backtrace" Syslog.Err "error" (Printf.sprintf "0/%d: Raised %s" all' (Printexc.to_string exn));
   loop 1 all
-
-let get_backtrace exn = Backtrace.find_all global_backtraces exn
 
 let with_thread_associated task f x =
   ThreadLocalTable.add tasks task;
@@ -244,7 +167,7 @@ let with_thread_named name f x =
     ThreadLocalTable.remove names;
     result
   with e ->
-    backtrace_is_important e;
+    Backtrace.is_important e;
     ThreadLocalTable.remove names;
     raise e
 
