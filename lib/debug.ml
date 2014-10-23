@@ -55,10 +55,16 @@ end
 
 let hostname = Cache.make Unix.gethostname
 let invalidate_hostname_cache () = Cache.invalidate hostname
+
+let rec split_c c str =
+  try
+    let i = String.index str c in
+    String.sub str 0 i :: (split_c c (String.sub str (i+1) (String.length str - i - 1)))
+  with Not_found -> [str]
     
 module Backtrace = struct
 
-  type backtrace = string (* < OCaml 4.02.0 *)
+  type backtrace = string list (* < OCaml 4.02.0 *)
 
   type t = {
     backtraces: backtrace array;
@@ -71,8 +77,10 @@ module Backtrace = struct
      memory needed. We maybe should make this a thread-local table. *)
   let max_backtraces = 100
 
+  let get_backtrace_401 () = split_c '\n' (Printexc.get_backtrace ())
+
   let make () =
-    let backtraces = Array.make max_backtraces "" in
+    let backtraces = Array.make max_backtraces [] in
     let exn_to_backtrace = Weak.create max_backtraces in
     let producer = 0 in (* free running *)
     let m = Mutex.create () in
@@ -81,7 +89,7 @@ module Backtrace = struct
   let add t exn =
     Mutex.execute t.m
       (fun () ->
-        let bt = Printexc.get_backtrace () in
+        let bt = get_backtrace_401 () in
         (* Deliberately clear the backtrace buffer *)
         (try raise Not_found with Not_found -> ());
         let slot = t.producer mod max_backtraces in
@@ -102,9 +110,10 @@ module Backtrace = struct
         | Some exn' when exn' = exn ->
           let bt = t.backtraces.(slot) in
           Weak.set t.exn_to_backtrace slot None;
+          t.backtraces.(slot) <- [];
           loop (bt :: acc) (from - 1)
         | _ -> loop acc (from - 1) in
-    loop [] (t.producer - 1)
+    List.concat (loop [] (t.producer - 1))
 end
 
 let global_backtraces = Backtrace.make ()
@@ -158,7 +167,7 @@ let gettimestring () =
 
 let format include_time brand priority message =
   let host = Cache.get hostname in
-  let name = match ThreadLocalTable.find names with Some x -> x | None -> "no thread" in
+  let name = match ThreadLocalTable.find names with Some x -> x | None -> "thread_zero" in
   let task = match ThreadLocalTable.find tasks with Some x -> x | None -> "" in
 
   let extra = Printf.sprintf "%s|%s|%s|%s" host name task brand in
@@ -189,7 +198,7 @@ let output_log brand level priority s =
     Syslog.log (get_facility ()) level msg
   end
 
-let backtrace_flush exn =
+let log_backtrace exn =
   let all = Backtrace.remove_all global_backtraces exn in
   let all' = List.length all in
   let rec loop i = function
@@ -197,7 +206,8 @@ let backtrace_flush exn =
   | x :: xs ->
     output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%d/%d: %s" i all' x);
     loop (i + 1) xs in
-    loop 1 all
+  output_log "backtrace" Syslog.Err "error" (Printexc.to_string exn);
+  loop 1 all
 
 let with_thread_associated task f x =
   ThreadLocalTable.add tasks task;
@@ -210,7 +220,7 @@ let with_thread_associated task f x =
        threads. This is the last chance to do something with the backtrace *)
     backtrace_is_important e;
     ThreadLocalTable.remove tasks;
-    backtrace_flush e;
+    log_backtrace e;
     raise e
 
 let with_thread_named name f x =
