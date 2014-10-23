@@ -77,7 +77,10 @@ module Backtrace = struct
      memory needed. We maybe should make this a thread-local table. *)
   let max_backtraces = 100
 
-  let get_backtrace_401 () = split_c '\n' (Printexc.get_backtrace ())
+  let get_backtrace_401 () =
+    Printexc.get_backtrace ()
+    |> split_c '\n'
+    |> List.filter (fun x -> x <> "")
 
   let make () =
     let backtraces = Array.make max_backtraces [] in
@@ -98,9 +101,8 @@ module Backtrace = struct
         t.backtraces.(slot) <- bt;
       )
 
-  let remove_all t exn =
-    (* work backwards from most recent backtrace, building the list
-       in reverse *)
+  (* fold over the slots matching exn *)
+  let fold t exn f initial =
     let rec loop acc from =
       if from < 0 || t.producer - from > max_backtraces
       then acc
@@ -108,12 +110,21 @@ module Backtrace = struct
         let slot = from mod max_backtraces in
         match Weak.get t.exn_to_backtrace slot with
         | Some exn' when exn' = exn ->
-          let bt = t.backtraces.(slot) in
-          Weak.set t.exn_to_backtrace slot None;
-          t.backtraces.(slot) <- [];
-          loop (bt :: acc) (from - 1)
-        | _ -> loop acc (from - 1) in
-    List.concat (loop [] (t.producer - 1))
+          loop (f acc slot) (from - 1)
+        | _ ->
+          loop acc (from - 1) in
+    loop initial (t.producer - 1)
+
+  let find_all t exn =
+    fold t exn (fun acc slot -> t.backtraces.(slot) :: acc) [] |> List.concat
+
+  let remove_all t exn =
+    fold t exn (fun acc slot ->
+        let bt = t.backtraces.(slot) in
+        Weak.set t.exn_to_backtrace slot None;
+        t.backtraces.(slot) <- [];
+        bt :: acc
+    ) [] |> List.concat
 end
 
 let global_backtraces = Backtrace.make ()
@@ -199,6 +210,7 @@ let output_log brand level priority s =
   end
 
 let log_backtrace exn =
+  backtrace_is_important exn;
   let all = Backtrace.remove_all global_backtraces exn in
   let all' = List.length all in
   let rec loop i = function
@@ -206,8 +218,10 @@ let log_backtrace exn =
   | x :: xs ->
     output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%d/%d: %s" i all' x);
     loop (i + 1) xs in
-  output_log "backtrace" Syslog.Err "error" (Printexc.to_string exn);
+  output_log "backtrace" Syslog.Err "error" (Printf.sprintf "0/%d: Raised %s" all' (Printexc.to_string exn));
   loop 1 all
+
+let get_backtrace exn = Backtrace.find_all global_backtraces exn
 
 let with_thread_associated task f x =
   ThreadLocalTable.add tasks task;
@@ -218,7 +232,7 @@ let with_thread_associated task f x =
   with e ->
     (* This function is a top-level exception handler typically used on fresh
        threads. This is the last chance to do something with the backtrace *)
-    backtrace_is_important e;
+    output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%s failed with exception %s" task (Printexc.to_string e));
     ThreadLocalTable.remove tasks;
     log_backtrace e;
     raise e

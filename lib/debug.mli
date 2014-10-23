@@ -82,3 +82,6 @@ val backtrace_is_important: exn -> unit
 
 val log_backtrace: exn -> unit
 (** Write any backtraces associated with [exn] to the log *)
+
+val get_backtrace: exn -> string list
+(** Get a copy of the backtrace associated with [exn] *)
