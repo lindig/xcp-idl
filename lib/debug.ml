@@ -53,7 +53,13 @@ module Cache = struct
       )
 end
 
-let hostname = Cache.make Unix.gethostname
+let hostname = Cache.make
+  (fun () ->
+    let h = Unix.gethostname () in
+    Backtrace.set_my_name (Filename.basename(Sys.argv.(0)) ^ " @ " ^ h);
+    h
+  )
+
 let invalidate_hostname_cache () = Cache.invalidate hostname
 
 let get_thread_id () =
