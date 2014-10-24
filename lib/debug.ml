@@ -162,8 +162,8 @@ let with_thread_associated task f x =
     (* This function is a top-level exception handler typically used on fresh
        threads. This is the last chance to do something with the backtrace *)
     output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%s failed with exception %s" task (Printexc.to_string e));
-    ThreadLocalTable.remove tasks;
     log_backtrace e;
+    ThreadLocalTable.remove tasks;
     raise e
 
 let with_thread_named name f x =
