@@ -140,17 +140,18 @@ let output_log brand level priority s =
     Syslog.log (get_facility ()) level msg
   end
 
+let rec split_c c str =
+  try
+    let i = String.index str c in
+    String.sub str 0 i :: (split_c c (String.sub str (i+1) (String.length str - i - 1)))
+  with Not_found -> [str]
+
 let log_backtrace exn =
   Backtrace.is_important exn;
-  let all = Backtrace.remove exn in
-  let all' = List.length all in
-  let rec loop i = function
-  | [] -> ()
-  | x :: xs ->
-    output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%d/%d: %s" i all' x);
-    loop (i + 1) xs in
-  output_log "backtrace" Syslog.Err "error" (Printf.sprintf "0/%d: Raised %s" all' (Printexc.to_string exn));
-  loop 1 all
+  let all = split_c '\n' (Backtrace.(to_string_hum (remove exn))) in
+  (* Write to the log line at a time *)
+  output_log "backtrace" Syslog.Err "error" (Printf.sprintf "Raised %s" (Printexc.to_string exn));
+  List.iter (output_log "backtrace" Syslog.Err "error") all
 
 let with_thread_associated task f x =
   ThreadLocalTable.add tasks task;
