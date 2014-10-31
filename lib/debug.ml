@@ -146,7 +146,7 @@ let rec split_c c str =
     String.sub str 0 i :: (split_c c (String.sub str (i+1) (String.length str - i - 1)))
   with Not_found -> [str]
 
-let log_backtrace exn =
+let log_backtrace exn bt =
   Backtrace.is_important exn;
   let all = split_c '\n' (Backtrace.(to_string_hum (remove exn))) in
   (* Write to the log line at a time *)
@@ -155,17 +155,17 @@ let log_backtrace exn =
 
 let with_thread_associated task f x =
   ThreadLocalTable.add tasks task;
-  try
-    let result = f x in
-    ThreadLocalTable.remove tasks;
+  let result = Backtrace.with_backtraces (fun () -> f x) in
+  ThreadLocalTable.remove tasks;
+  match result with
+  | `Ok result ->
     result
-  with e ->
+  | `Error (exn, bt) ->
     (* This function is a top-level exception handler typically used on fresh
        threads. This is the last chance to do something with the backtrace *)
-    output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%s failed with exception %s" task (Printexc.to_string e));
-    log_backtrace e;
-    ThreadLocalTable.remove tasks;
-    raise e
+    output_log "backtrace" Syslog.Err "error" (Printf.sprintf "%s failed with exception %s" task (Printexc.to_string exn));
+    log_backtrace exn bt;
+    raise exn
 
 let with_thread_named name f x =
   ThreadLocalTable.add names name;

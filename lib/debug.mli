@@ -53,8 +53,8 @@ val logging_disabled_for : (string * Syslog.level) list ref
 val log_to_stdout : unit -> unit
 (** [log_to_stdout ()] will echo all log output to stdout (not the default) *)
 
-val log_backtrace: exn -> unit
-(** Write any backtraces associated with [exn] to the log *)
+val log_backtrace: exn -> Backtrace.t -> unit
+(** Write the backtrace associated with [exn] to the log *)
 
 module type DEBUG = sig
 	(** Debug function *)
