@@ -167,6 +167,8 @@ let with_thread_associated task f x =
     log_backtrace exn bt;
     raise exn
 
+let get_current_task () = ThreadLocalTable.find tasks
+
 let with_thread_named name f x =
   ThreadLocalTable.add names name;
   try

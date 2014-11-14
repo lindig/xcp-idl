@@ -22,6 +22,9 @@ val invalidate_hostname_cache: unit -> unit
 (** Do an action with a task name associated with the current thread *)
 val with_thread_associated : string -> ('a -> 'b) -> 'a -> 'b
 
+(** Return the current task associated with this thread *)
+val get_current_task: unit -> string option
+
 (** {2 Associate a name to the current thread} *)
 
 (** Do an action with a name associated with the current thread *)
