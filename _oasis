@@ -46,6 +46,20 @@ Library xcp_rrd
   Modules:            Data_source, Ds, Rrd_interface, Rrd_client
   BuildDepends:       xcp, threads, rpclib, rpclib.syntax, rrd
 
+Library xcp_rrd_ppx
+  CompiledObject:     best
+  Path:               rrd_ppx
+  Findlibname:        rrd_ppx
+  Findlibparent:      xcp
+  Modules       +:    Rrd_idl
+  BuildDepends  +:    ppx_deriving_rpc
+  BuildDepends  +:    rpclib
+  BuildDepends  +:    result
+  BuildDepends  +:    rresult
+  BuildDepends  +:    xcp
+  BuildDepends  +:    threads
+  BuildDepends  +:    rrd
+
 Library xcp_xen
   CompiledObject:     best
   Path:               xen
