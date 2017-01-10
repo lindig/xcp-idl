@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: f292b73f7d9bfd57083c4d142dbc9a81)
+# DO NOT EDIT (digest: 3df5e4aede68fac1b038fd75abcfc8c1)
 version = "1.2.0"
 description =
 "Interface definitions and common boilerplate for the xapi toolstack"
@@ -44,6 +44,18 @@ package "storage" (
  archive(native) = "xcp_storage.cmxa"
  archive(native, plugin) = "xcp_storage.cmxs"
  exists_if = "xcp_storage.cma"
+)
+
+package "rrd_ppx" (
+ version = "1.2.0"
+ description =
+ "Interface definitions and common boilerplate for the xapi toolstack"
+ requires = "ppx_deriving_rpc rpclib result rresult xcp threads rrd"
+ archive(byte) = "xcp_rrd_ppx.cma"
+ archive(byte, plugin) = "xcp_rrd_ppx.cma"
+ archive(native) = "xcp_rrd_ppx.cmxa"
+ archive(native, plugin) = "xcp_rrd_ppx.cmxs"
+ exists_if = "xcp_rrd_ppx.cma"
 )
 
 package "rrd" (
