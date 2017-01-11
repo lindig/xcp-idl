@@ -2,7 +2,7 @@
 
 module My = struct
 
-  exception Archive_failed of string (* where it is raised? *)
+  exception Archive_failed of string (* where is it raised? *)
 
   type t = {
     name : string;
@@ -32,13 +32,24 @@ module My = struct
     shared_page_refs: int list;
   } [@@deriving rpcty] 
 
-  type error = Error of string [@@deriving rpcty]
+  
+  type error = 
+    | Archive_failed_exn of string 
+  [@@deriving rpcty]
+  
   exception Error of error
+
+  let raiser = function
+    | Archive_failed_exn str -> raise (Archive_failed str)
+
+  let matcher = function
+    | Archive_failed str -> Some (Archive_failed_exn str)
+    | _                  -> None
 
   let error = Idl.Error.
                 { def     = error
-                ; raiser  = (function | e -> raise (Error e) )
-                ; matcher = (function | Error e -> Some e | _ -> None)
+                ; raiser  = raiser
+                ; matcher = matcher
                 }
 end
 
