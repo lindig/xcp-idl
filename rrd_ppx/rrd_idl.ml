@@ -129,10 +129,10 @@ module API(R: Idl.RPC) = struct
         ~description:["file path"]
         Rpc.Types.string
 
-    let session_id = Idl.Param.mk
+    let session_id = option
         ~name:"session_id"
         ~description:["session id"]
-        Rpc.Types.string
+        Rpc.Types.(Basic String)
 
     let datasources = list
         ~name:"data_sources"
