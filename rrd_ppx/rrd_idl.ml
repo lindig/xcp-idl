@@ -193,6 +193,11 @@ module API(R: Idl.RPC) = struct
       []
       R.(T.vm_uuid @-> T.domid @-> returning T.unit My.error)
 
+  let push_rrd_remote = R.declare
+      "push_rrd_remote"
+      ["push_rrd_remote"]
+      R.(T.vm_uuid @-> T.address @-> returning T.unit My.error)
+
   let remove_rrd = R.declare
       "remove_rrd"
       ["remove_rrd"]
