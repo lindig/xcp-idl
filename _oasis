@@ -60,6 +60,22 @@ Library xcp_rrd_ppx
   BuildDepends  +:    threads
   BuildDepends  +:    rrd
 
+Executable rrd-cli
+  CompiledObject:     best
+  Path:               rrd_ppx
+  MainIs:             rrd_cli.ml
+  Install:            false
+  BuildDepends  +:    cmdliner
+  BuildDepends  +:    cmdliner
+  BuildDepends  +:    ppx_deriving_rpc
+  BuildDepends  +:    result
+  BuildDepends  +:    rpclib
+  BuildDepends  +:    rpclib.cmdliner
+  BuildDepends  +:    rpclib.json
+  BuildDepends  +:    rrd
+  BuildDepends  +:    rresult
+  BuildDepends  +:    xcp
+
 Library xcp_xen
   CompiledObject:     best
   Path:               xen
