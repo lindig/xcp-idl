@@ -64,7 +64,7 @@ Executable rrd-cli
   CompiledObject:     best
   Path:               rrd_ppx
   MainIs:             rrd_cli.ml
-  Install:            false
+  Install:            true
   BuildDepends  +:    cmdliner
   BuildDepends  +:    ppx_deriving_rpc
   BuildDepends  +:    result
