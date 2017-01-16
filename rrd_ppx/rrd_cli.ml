@@ -1,9 +1,23 @@
+(*
+ * Copyright (C) Citrix Systems Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation; version 2.1 only. with the special
+ * exception on linking described in file LICENSE.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *)
 
 module RRD  = Rrd_idl
 module C    = Cmdliner
-module CG   = Cmdlinergen.Gen()
+module CG   = Cmdlinergen.Gen ( )
 module CX   = RRD.API(CG)
 
+(* [rpc path call] marshalls and unmarshalls an RPC call *)
 let rpc (path:string) (call:Rpc.call) : Rpc.response =
   let socket    = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
   let ()        = Unix.connect socket (Unix.ADDR_UNIX path) in
@@ -39,14 +53,16 @@ module CMD = struct
   let cmds =
     let rpc' = rpc !RRD.default_path in
       List.map (fun term -> term rpc') !CG.terms
-
 end
 
 let main () =
-  match C.Term.eval_choice CMD.main CMD.cmds with
-  | `Ok(_)      -> exit 0
-  | `Error _    -> exit 1
-  | _           -> exit 2
+  try
+    match C.Term.eval_choice CMD.main CMD.cmds with
+    | `Ok(_)      -> exit 0
+    | `Error _    -> exit 1
+    | _           -> exit 2
+  with
+    e -> Printf.eprintf "error: %s\n" (Printexc.to_string e); exit 2
 
 (* only run main when we are not interactive *)
 let () = if !Sys.interactive then () else main ()
