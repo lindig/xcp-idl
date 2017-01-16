@@ -1,58 +1,28 @@
 
-module C = Cmdliner
+module RRD  = Rrd_idl
+module C    = Cmdliner
+module CG   = Cmdlinergen.Gen()
+module CX   = RRD.API(CG)
 
-module RRDD = struct
-  let has_vm_rrd vm_uuid = false (* dummy *)
-end
-
-let help_main man_format cmds = function
-  | None -> `Help (`Pager, None) (* help about the program. *)
-  | Some topic ->
-    let topics = "copyright" :: cmds in
-    let conv, _ = C.Arg.enum (List.rev_map (fun s -> (s, s)) topics) in
-    match conv topic with
-    | `Error e -> `Error (false, e)
-    | `Ok t when t = "topics" -> List.iter print_endline topics; `Ok true
-    | `Ok t when List.mem t cmds -> `Help (man_format, Some t)
-    | `Ok t -> (* only reached when we add topics above *)
-      let page = (topic, 7, "", "", ""),
-                 [`S "OTHER"
-                 ;`P "Here is room for online help texts"
-                 ]
-      in
-      `Ok ( C.Manpage.print man_format Format.std_formatter page
-          ; true
-          )
+let rpc (path:string) (call:Rpc.call) : Rpc.response =
+  let socket    = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+  let ()        = Unix.connect socket (Unix.ADDR_UNIX path) in
+  let ic        = Unix.in_channel_of_descr socket in
+  let oc        = Unix.out_channel_of_descr socket in
+  let msg_buf   = Jsonrpc.string_of_call call in
+  let len       = Printf.sprintf "%016d" (String.length msg_buf) in
+  output_string oc len;
+  output_string oc msg_buf;
+  flush oc;
+  let len_buf = String.make 16 '\000' in
+  really_input ic len_buf 0 16;
+  let len = int_of_string len_buf in
+  let msg_buf = String.make len '\000' in
+  really_input ic msg_buf 0 len;
+  let (response: Rpc.response) = Jsonrpc.response_of_string msg_buf in
+  response
 
 module CMD = struct
-  (** topic for help *)
-  let topic =
-    let doc = "Help topic" in
-    C.Arg.(value
-           & pos 0 (some string) None
-           & info [] ~docv:"TOPIC" ~doc)
-
-  let vm_uuid =
-    let doc = "uuid" in
-    C.Arg.(value
-           & pos 0 (some string) None
-           & info [] ~docv:"VM uuid" ~doc)
-
-  let help =
-    let doc = "help for sub commands" in
-    let man =
-      [ `S "DESCRIPTION"
-      ; `P "provide help for a sub command"
-      ; `S "BUGS"
-      ; `P "Report bug on the github issue tracker"
-      ]
-    in
-    ( C.Term.(ret
-                (const help_main $ man_format $ choice_names $ topic))
-    , C.Term.info "help" ~version:"1.0" ~doc ~man
-    )
-
-
   let main =
     let doc = "Interface to the RRDD service" in
     let man =
@@ -65,29 +35,18 @@ module CMD = struct
     , C.Term.info "rrd-cli" ~version:"0.0" ~doc ~man
     )
 
-  let has_vm_rrd =
-    let doc = "check if we have RRD data for this VM" in
-    let man =
-      [ `S "DESCRIPTION"
-      ; `P "check if we have RRD data for this VM"
-      ; `S "BUGS"
-      ; `P "Report bug on the github issue tracker"
-      ]
-    in
-    ( C.Term.(const RRDD.has_vm_rrd $ vm_uuid)
-    , C.Term.info "has-vm-rrd" ~version:"0.0" ~doc ~man
-    )
-
+  (* provide each RRDD API call as a sub command *)
   let cmds =
-    [ help
-    ; has_vm_rrd
-    ]
+    let rpc' = rpc !RRD.default_path in
+      List.map (fun term -> term rpc') !CG.terms
 
 end
 
-let () =
+let main () =
   match C.Term.eval_choice CMD.main CMD.cmds with
   | `Ok(_)      -> exit 0
   | `Error _    -> exit 1
   | _           -> exit 2
 
+(* only run main when we are not interactive *)
+let () = if !Sys.interactive then () else main ()

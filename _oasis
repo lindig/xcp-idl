@@ -66,7 +66,6 @@ Executable rrd-cli
   MainIs:             rrd_cli.ml
   Install:            false
   BuildDepends  +:    cmdliner
-  BuildDepends  +:    cmdliner
   BuildDepends  +:    ppx_deriving_rpc
   BuildDepends  +:    result
   BuildDepends  +:    rpclib
