@@ -1,6 +1,11 @@
 
 
-exception Archive_failed of string (* where is it raised? *)
+type error =
+  | Archive_failed      of string
+  | UnknownError        of string
+[@@deriving rpcty]
+
+exception Error of error
 
 type t = {
   name : string;
@@ -30,18 +35,12 @@ type interdomain_info = {
 } [@@deriving rpcty]
 
 
-type error =
-  | Archive_failed_exn of string
-[@@deriving rpcty]
-
-exception Error of error
-
 let raiser = function
-  | Archive_failed_exn str -> raise (Archive_failed str)
+  | error -> raise (Error error)
 
 let matcher = function
-  | Archive_failed str -> Some (Archive_failed_exn str)
-  | _                  -> None
+  | Error(e)  -> Some (e)
+  | e         -> Some (UnknownError(Printexc.to_string e))
 
 let rpc_error = Idl.Error.
               { def     = error
