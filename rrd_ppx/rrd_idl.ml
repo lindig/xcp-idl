@@ -72,7 +72,7 @@ let queue_name = ref (Xcp_service.common_prefix ^ service_name)
 
 let (//) = Filename.concat
 let default_sockets_dir = "/var/lib/xcp"
-let daemon_name     = "xcp-rrdd"
+let daemon_name     = "xcp-rrdd-v2"
 let default_path    = ref (default_sockets_dir // daemon_name)
 let forwarded_path  =
   ref (default_sockets_dir // daemon_name ^ ".forwarded")
