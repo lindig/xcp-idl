@@ -12,14 +12,25 @@
  * GNU Lesser General Public License for more details.
  *)
 
-module C    = Cmdliner
-module CG   = Cmdlinergen.Gen ( )
-module CX   = Rrd_idl.API(CG)
+module C                    = Cmdliner
 
-(* [rpc path call] marshalls and unmarshalls an RPC call *)
-let rpc (queue:string) (call:Rpc.call) : Rpc.response =
+module API                  = Cmdlinergen.Gen ( )
+module Plugin               = Cmdlinergen.Gen ( )
+module LocalPlugin          = Cmdlinergen.Gen ( )
+module InterdomainPlugin    = Cmdlinergen.Gen ( )
+module HA                   = Cmdlinergen.Gen ( )
+
+module API'                 = Rrd_idl.API(API)
+module Plugin'              = Rrd_idl.Plugin(Plugin)
+module LocalPlugin'         = Rrd_idl.LocalPlugin(LocalPlugin)
+module InterdomainPlugin'   = Rrd_idl.InterdomainPlugin(InterdomainPlugin)
+module HA'                  = Rrd_idl.HA(HA)
+
+
+(* [rpc call] marshalls and unmarshalls an RPC call *)
+let rpc (call:Rpc.call) : Rpc.response =
   if !Xcp_client.use_switch then
-    Xcp_client.json_switch_rpc queue call
+    Xcp_client.json_switch_rpc !Rrd_idl.queue_name call
   else
     failwith "Message switch not configured"
 
@@ -36,10 +47,23 @@ module CMD = struct
     , C.Term.info "rrd-cli" ~version:"0.0" ~doc ~man
     )
 
-  (* provide each RRDD API call as a sub command *)
+  (* Provide each RRDD API call as a sub command. Commandliner supprts
+   * sub-commands only on the top level. This makes it difficult
+   * to expose the Plugin commands as sub command.  We therefore only
+   * expose API calls that don't conflict in their names.
+   *
+   * (We can't rewwrite the names because the type for terms is
+   * abstract.)
+   *)
+
   let cmds =
-    let rpc' = rpc !Rrd_idl.queue_name in
-      List.map (fun term -> term rpc') !CG.terms
+    List.concat
+    [ !API.terms
+    ; !Plugin.terms
+    ; !HA.terms
+    ]
+    |> List.map (fun term -> term rpc)
+
 end
 
 let main () =
