@@ -67,7 +67,7 @@ let rpc_error = Idl.Error.
 
 (* Shared constants like file paths and so on *)
 
-let service_name = "rrd"
+let service_name = "rrd-v2"
 let queue_name = ref (Xcp_service.common_prefix ^ service_name)
 
 let (//) = Filename.concat
