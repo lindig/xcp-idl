@@ -52,6 +52,7 @@ Library xcp_rrd_ppx
   Findlibname:        rrd_ppx
   Findlibparent:      xcp
   Modules       +:    Rrd_idl
+  Modules       +:    Rrd_client
   BuildDepends  +:    ppx_deriving_rpc
   BuildDepends  +:    rpclib
   BuildDepends  +:    result
