@@ -58,7 +58,7 @@ module Make (R :  RPC) = struct
   let has_vm_rrd ~vm_uuid =
     API'.has_vm_rrd R.rpc vm_uuid
 
-  let migrate_rrd ~session_id ?remote_address ~vm_uuid ~host_uuid =
+  let migrate_rrd ?session_id ~remote_address ~vm_uuid ~host_uuid =
     API'.migrate_rrd R.rpc session_id remote_address vm_uuid host_uuid
 
   let push_rrd_local ~vm_uuid ~domid =

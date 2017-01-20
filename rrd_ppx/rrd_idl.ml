@@ -153,6 +153,11 @@ module T = struct (* RPC call parameter type representation *)
       ~description:["session id"]
       Rpc.Types.string
 
+  let session_id_opt = option
+      ~name:"session_id"
+      ~description:["session id"]
+      Rpc.Types.(Basic String)
+
   let datasources = list
       ~name:"data_sources"
       ~description:["RRD data sources"]
@@ -214,8 +219,8 @@ module API(R: Idl.RPC) = struct
   let migrate_rrd = R.declare
       "migrate_rrd"
       ["migrate_rrd"]
-      R.(T.session_id
-         @-> T.address_opt
+      R.(T.session_id_opt
+         @-> T.address
          @-> T.vm_uuid
          @-> T.host_uuid
          @-> returning T.unit rpc_error
