@@ -38,13 +38,14 @@ Library xcp_network
   Modules:            Network_interface, Network_client, Network_stats
   BuildDepends:       xcp, threads, rpclib, rpclib.syntax
 
-Library xcp_rrd
-  CompiledObject:     best
-  Path:               rrd
-  Findlibname:        rrd
-  Findlibparent:      xcp
-  Modules:            Data_source, Ds, Rrd_interface, Rrd_client
-  BuildDepends:       xcp, threads, rpclib, rpclib.syntax, rrd
+# This is superseded by xcp_rrd_ppx - will remove ./rrd later
+# Library xcp_rrd
+#   CompiledObject:     best
+#   Path:               rrd
+#   Findlibname:        rrd
+#   Findlibparent:      xcp
+#   Modules:            Data_source, Ds, Rrd_interface, Rrd_client
+#   BuildDepends:       xcp, threads, rpclib, rpclib.syntax, rrd
 
 Library xcp_rrd_ppx
   CompiledObject:     best
@@ -52,7 +53,7 @@ Library xcp_rrd_ppx
   Findlibname:        rrd_ppx
   Findlibparent:      xcp
   Modules       +:    Rrd_idl
-  Modules       +:    Rrd_client
+  Modules       +:    Rrd_rpc_client
   BuildDepends  +:    ppx_deriving_rpc
   BuildDepends  +:    rpclib
   BuildDepends  +:    result
@@ -65,7 +66,7 @@ Executable rrd-cli
   CompiledObject:     best
   Path:               rrd_ppx
   MainIs:             rrd_cli.ml
-  Install:            true
+  Install:            false
   BuildDepends  +:    cmdliner
   BuildDepends  +:    ppx_deriving_rpc
   BuildDepends  +:    result

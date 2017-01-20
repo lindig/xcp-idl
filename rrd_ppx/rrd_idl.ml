@@ -34,6 +34,54 @@ type t = {
   units : string
 } [@@deriving rpcty]
 
+let to_key_value_map ds =
+  [ "name_label"      , ds.name
+  ; "name_description", ds.description
+  ; "enabled"         , string_of_bool ds.enabled
+  ; "standard"        , string_of_bool ds.standard
+  ; "min"             , string_of_float ds.min
+  ; "max"             , string_of_float ds.max
+  ; "units"           , ds.units
+  ]
+
+module DS = struct (* this was rrd/ds.ml *)
+
+  type ds =
+  { ds_name :         string
+  ; ds_description :  string
+  ; ds_value :        Rrd.ds_value_type
+  ; ds_type :         Rrd.ds_type
+  ; ds_default :      bool
+  ; ds_min :          float
+  ; ds_max :          float
+  ; ds_units :        string
+  ; ds_pdp_transform_function : float -> float
+  }
+
+  let ds_make
+      ~name
+      ~description
+      ~value
+      ~ty
+      ~default
+      ~units
+      ?(min = neg_infinity)
+      ?(max = infinity)
+      ?(transform = (fun x -> x))
+      () =
+    { ds_name         = name
+    ; ds_description  = description
+    ; ds_value        = value
+    ; ds_type         = ty
+    ; ds_default      = default
+    ; ds_min          = min
+    ; ds_max          = max
+    ; ds_units        = units
+    ; ds_pdp_transform_function = transform
+    }
+
+end
+
 type plugin_protocol    = V1 | V2 [@@deriving rpcty]
 type sampling_frequency = Five_Seconds [@@deriving rpcty]
 
@@ -352,15 +400,16 @@ module API(R: Idl.RPC) = struct
          @-> returning T.unit rpc_error
         )
 
-  let interface = R.describe Idl.Interface.
-    { name = "API"
-    ; description =
-      [ "This is the general interface to the RRDD service."
-      ; "There is a seperate interface for plugins which provide"
-      ; "data for RRDD."
-      ]
-    ; version = (1,0,0)
-    }
+  let interface = R.describe
+      Idl.Interface.
+        { name = "API"
+        ; description =
+            [ "This is the general interface to the RRDD service."
+            ; "There is a seperate interface for plugins which provide"
+            ; "data for RRDD."
+            ]
+        ; version = (1,0,0)
+        }
 end
 
 
@@ -393,17 +442,18 @@ module Plugin(R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.plugin_id @-> returning T.float rpc_error)
 
-  let interface = R.describe Idl.Interface.
-    { name = "Plugin"
-    ; version = (1,0,0)
-    ; description =
-      [ "This is the interface for registering data source plugins."
-      ; "Note that for plugins running on the local host a new"
-      ; "discovery mechanism exists that does not require plugins to"
-      ; "register using this API. Hence, this interface exists mostly"
-      ; "to support non-local data sources."
-      ]
-    }
+  let interface = R.describe
+      Idl.Interface.
+        { name = "Plugin"
+        ; version = (1,0,0)
+        ; description =
+            [ "This is the interface for registering data source plugins."
+            ; "Note that for plugins running on the local host a new"
+            ; "discovery mechanism exists that does not require plugins to"
+            ; "register using this API. Hence, this interface exists mostly"
+            ; "to support non-local data sources."
+            ]
+        }
 
 end
 
@@ -427,17 +477,18 @@ module LocalPlugin (R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.plugin_id @-> returning T.float rpc_error)
 
-  let interface = R.describe Idl.Interface.
-    { name = "LocalPlugin"
-    ; description =
-      [ "This is the interface for registering data source plugins."
-      ; "Note that for plugins running on the local host a new"
-      ; "discovery mechanism exists that does not require plugins to"
-      ; "register using this API. Hence, this interface exists mostly"
-      ; "to support non-local data sources."
-      ]
-    ; version = (1,0,0)
-    }
+  let interface = R.describe
+      Idl.Interface.
+        { name = "LocalPlugin"
+        ; description =
+            [ "This is the interface for registering data source plugins."
+            ; "Note that for plugins running on the local host a new"
+            ; "discovery mechanism exists that does not require plugins to"
+            ; "register using this API. Hence, this interface exists mostly"
+            ; "to support non-local data sources."
+            ]
+        ; version = (1,0,0)
+        }
 end
 
 module InterdomainPlugin (R: Idl.RPC) = struct
@@ -460,17 +511,18 @@ module InterdomainPlugin (R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.interdomain_id @-> returning T.float rpc_error)
 
-  let interface = R.describe Idl.Interface.
-    { name = "InterdomainPlugin"
-    ; version = (1,0,0)
-    ; description =
-      [ "This is the interface for registering data source plugins."
-      ; "Note that for plugins running on the local host a new"
-      ; "discovery mechanism exists that does not require plugins to"
-      ; "register using this API. Hence, this interface exists mostly"
-      ; "to support non-local data sources."
-      ]
-    }
+  let interface = R.describe
+      Idl.Interface.
+        { name = "InterdomainPlugin"
+        ; version = (1,0,0)
+        ; description =
+            [ "This is the interface for registering data source plugins."
+            ; "Note that for plugins running on the local host a new"
+            ; "discovery mechanism exists that does not require plugins to"
+            ; "register using this API. Hence, this interface exists mostly"
+            ; "to support non-local data sources."
+            ]
+        }
 end
 
 module HA (R: Idl.RPC) = struct
@@ -497,12 +549,13 @@ module HA (R: Idl.RPC) = struct
       ["disable"]
       R.(T.unit @-> returning T.unit rpc_error)
 
-  let interface = R.describe Idl.Interface.
-    { name = "HA"
-    ; version = (1,0,0)
-    ; description =
-      [ "This is the interface for controlling the High Availability"
-      ; "(HA) monitoring service."
-      ]
-    }
+  let interface = R.describe
+      Idl.Interface.
+        { name = "HA"
+        ; version = (1,0,0)
+        ; description =
+            [ "This is the interface for controlling the High Availability"
+            ; "(HA) monitoring service."
+            ]
+        }
 end

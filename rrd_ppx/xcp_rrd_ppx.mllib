@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 1b148e704500fbaa246bf682eaa45811)
+# DO NOT EDIT (digest: 70a319ac9e0b2d3f71bd36939e3851d0)
 Rrd_idl
-Rrd_client
+Rrd_rpc_client
 # OASIS_STOP
