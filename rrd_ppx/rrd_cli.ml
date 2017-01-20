@@ -28,9 +28,9 @@ module HA'                  = Rrd_idl.HA(HA)
 
 
 (* [rpc call] marshalls and unmarshalls an RPC call *)
-let rpc (call:Rpc.call) : Rpc.response =
+let rpc queue (call:Rpc.call) : Rpc.response =
   if !Xcp_client.use_switch then
-    Xcp_client.json_switch_rpc !Rrd_idl.queue_name call
+    Xcp_client.json_switch_rpc queue call
   else
     failwith "Message switch not configured"
 
@@ -56,19 +56,24 @@ module CMD = struct
    * abstract.)
    *)
 
-  let cmds =
+  let cmds queue =
     List.concat
     [ !API.terms
     ; !Plugin.terms
     ; !HA.terms
     ]
-    |> List.map (fun term -> term rpc)
+    |> List.map (fun term -> term (rpc queue))
 
 end
 
+let queue =
+  try
+    Sys.getenv "XCP_RRD_QUEUE"
+  with Not_found -> !Rrd_idl.queue_name
+
 let main () =
   try
-    match C.Term.eval_choice CMD.main CMD.cmds with
+    match C.Term.eval_choice CMD.main (CMD.cmds queue) with
     | `Ok(_)      -> exit 0
     | `Error _    -> exit 1
     | _           -> exit 2
