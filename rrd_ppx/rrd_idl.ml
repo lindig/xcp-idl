@@ -215,7 +215,7 @@ module API(R: Idl.RPC) = struct
       "migrate_rrd"
       ["migrate_rrd"]
       R.(T.session_id
-         @-> T.address
+         @-> T.address_opt
          @-> T.vm_uuid
          @-> T.host_uuid
          @-> returning T.unit rpc_error
