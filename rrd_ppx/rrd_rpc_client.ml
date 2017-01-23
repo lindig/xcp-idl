@@ -12,11 +12,11 @@
  * GNU Lesser General Public License for more details.
  *)
 
-module API'                = Rrd_idl.API               (Idl.GenClientExn)
-module Plugin'             = Rrd_idl.Plugin            (Idl.GenClientExn)
-module LocalPlugin'        = Rrd_idl.LocalPlugin       (Idl.GenClientExn)
-module Interdomain'        = Rrd_idl.InterdomainPlugin (Idl.GenClientExn)
-module HA'                 = Rrd_idl.HA                (Idl.GenClientExn)
+module API'           = Rrd_idl.API               (Idl.GenClientExn ())
+module Plugin'        = Rrd_idl.Plugin            (Idl.GenClientExn ())
+module LocalPlugin'   = Rrd_idl.LocalPlugin       (Idl.GenClientExn ())
+module Interdomain'   = Rrd_idl.InterdomainPlugin (Idl.GenClientExn ())
+module HA'            = Rrd_idl.HA                (Idl.GenClientExn ())
 
 let rec retry f =
   try f () with

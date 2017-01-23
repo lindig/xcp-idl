@@ -14,18 +14,11 @@
 
 module C                    = Cmdliner
 
-module API                  = Cmdlinergen.Gen ( )
-module Plugin               = Cmdlinergen.Gen ( )
-module LocalPlugin          = Cmdlinergen.Gen ( )
-module InterdomainPlugin    = Cmdlinergen.Gen ( )
-module HA                   = Cmdlinergen.Gen ( )
-
-module API'                 = Rrd_idl.API(API)
-module Plugin'              = Rrd_idl.Plugin(Plugin)
-module LocalPlugin'         = Rrd_idl.LocalPlugin(LocalPlugin)
-module InterdomainPlugin'   = Rrd_idl.InterdomainPlugin(InterdomainPlugin)
-module HA'                  = Rrd_idl.HA(HA)
-
+module API                  = Rrd_idl.API(Cmdlinergen.Gen ( ))
+module Plugin               = Rrd_idl.Plugin(Cmdlinergen.Gen ( ))
+module LocalPlugin          = Rrd_idl.LocalPlugin(Cmdlinergen.Gen ( ))
+module InterdomainPlugin    = Rrd_idl.InterdomainPlugin(Cmdlinergen.Gen ( ))
+module HA                   = Rrd_idl.HA(Cmdlinergen.Gen ( ))
 
 (* [rpc call] marshalls and unmarshalls an RPC call *)
 let rpc queue (call:Rpc.call) : Rpc.response =
@@ -62,9 +55,11 @@ module CMD = struct
 
   let cmds queue =
     List.concat
-    [ !API.terms
-    ; !Plugin.terms
-    ; !HA.terms
+    [ API.implementation ()
+    ; Plugin.implementation ()
+    ; LocalPlugin.implementation ()
+    ; InterdomainPlugin.implementation ()
+    ; HA.implementation ()
     ]
     |> List.map (fun term -> term (rpc queue))
 

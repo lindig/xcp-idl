@@ -47,16 +47,16 @@ let to_key_value_map ds =
 module DS = struct (* this was rrd/ds.ml *)
 
   type ds =
-  { ds_name :         string
-  ; ds_description :  string
-  ; ds_value :        Rrd.ds_value_type
-  ; ds_type :         Rrd.ds_type
-  ; ds_default :      bool
-  ; ds_min :          float
-  ; ds_max :          float
-  ; ds_units :        string
-  ; ds_pdp_transform_function : float -> float
-  }
+    { ds_name :         string
+    ; ds_description :  string
+    ; ds_value :        Rrd.ds_value_type
+    ; ds_type :         Rrd.ds_type
+    ; ds_default :      bool
+    ; ds_min :          float
+    ; ds_max :          float
+    ; ds_units :        string
+    ; ds_pdp_transform_function : float -> float
+    }
 
   let ds_make
       ~name
@@ -244,6 +244,20 @@ end (* T *)
 
 module API(R: Idl.RPC) = struct
 
+  let description =
+    Idl.Interface.
+      { name = "API"
+      ; namespace = None
+      ; description =
+          [ "This is the general interface to the RRDD service."
+          ; "There is a seperate interface for plugins which provide"
+          ; "data for RRDD."
+          ]
+      ; version = (1,0,0)
+      }
+
+  let implementation = R.implement description
+
   let has_vm_rrd = R.declare
       "has_vm_rrd"
       ["True if we have RRD data for the given VM"]
@@ -400,20 +414,26 @@ module API(R: Idl.RPC) = struct
          @-> returning T.unit rpc_error
         )
 
-  let interface = R.describe
-      Idl.Interface.
-        { name = "API"
-        ; description =
-            [ "This is the general interface to the RRDD service."
-            ; "There is a seperate interface for plugins which provide"
-            ; "data for RRDD."
-            ]
-        ; version = (1,0,0)
-        }
 end
 
 
 module Plugin(R: Idl.RPC) = struct
+
+  let description =
+    Idl.Interface.
+      { name = "Plugin"
+      ; version = (1,0,0)
+      ; namespace = Some "plugin"
+      ; description =
+          [ "This is the interface for registering data source plugins."
+          ; "Note that for plugins running on the local host a new"
+          ; "discovery mechanism exists that does not require plugins to"
+          ; "register using this API. Hence, this interface exists mostly"
+          ; "to support non-local data sources."
+          ]
+      }
+  let implementation = R.implement description
+
   let get_header = R.declare
       "get_header"
       ["get_header"]
@@ -442,22 +462,25 @@ module Plugin(R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.plugin_id @-> returning T.float rpc_error)
 
-  let interface = R.describe
-      Idl.Interface.
-        { name = "Plugin"
-        ; version = (1,0,0)
-        ; description =
-            [ "This is the interface for registering data source plugins."
-            ; "Note that for plugins running on the local host a new"
-            ; "discovery mechanism exists that does not require plugins to"
-            ; "register using this API. Hence, this interface exists mostly"
-            ; "to support non-local data sources."
-            ]
-        }
-
 end
 
 module LocalPlugin (R: Idl.RPC) = struct
+  let description =
+    Idl.Interface.
+      { name = "LocalPlugin"
+      ; namespace = Some "local"
+      ; version = (1,0,0)
+      ; description =
+          [ "This is the interface for registering data source plugins."
+          ; "Note that for plugins running on the local host a new"
+          ; "discovery mechanism exists that does not require plugins to"
+          ; "register using this API. Hence, this interface exists mostly"
+          ; "to support non-local data sources."
+          ]
+      }
+
+  let implementation = R.implement description
+
   let register = R.declare
       "register"
       ["register"]
@@ -477,21 +500,25 @@ module LocalPlugin (R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.plugin_id @-> returning T.float rpc_error)
 
-  let interface = R.describe
-      Idl.Interface.
-        { name = "LocalPlugin"
-        ; description =
-            [ "This is the interface for registering data source plugins."
-            ; "Note that for plugins running on the local host a new"
-            ; "discovery mechanism exists that does not require plugins to"
-            ; "register using this API. Hence, this interface exists mostly"
-            ; "to support non-local data sources."
-            ]
-        ; version = (1,0,0)
-        }
 end
 
 module InterdomainPlugin (R: Idl.RPC) = struct
+  let description =
+    Idl.Interface.
+      { name = "InterdomainPlugin"
+      ; namespace = Some "interdomain"
+      ; version = (1,0,0)
+      ; description =
+          [ "This is the interface for registering data source plugins."
+          ; "Note that for plugins running on the local host a new"
+          ; "discovery mechanism exists that does not require plugins to"
+          ; "register using this API. Hence, this interface exists mostly"
+          ; "to support non-local data sources."
+          ]
+      }
+
+  let implementation = R.implement description
+
   let register = R.declare
       "register"
       ["register"]
@@ -511,21 +538,21 @@ module InterdomainPlugin (R: Idl.RPC) = struct
       ["next_reading"]
       R.(T.interdomain_id @-> returning T.float rpc_error)
 
-  let interface = R.describe
-      Idl.Interface.
-        { name = "InterdomainPlugin"
-        ; version = (1,0,0)
-        ; description =
-            [ "This is the interface for registering data source plugins."
-            ; "Note that for plugins running on the local host a new"
-            ; "discovery mechanism exists that does not require plugins to"
-            ; "register using this API. Hence, this interface exists mostly"
-            ; "to support non-local data sources."
-            ]
-        }
 end
 
 module HA (R: Idl.RPC) = struct
+  let description =
+    Idl.Interface.
+      { name = "HA"
+      ; namespace = Some "ha"
+      ; version = (1,0,0)
+      ; description =
+          [ "This is the interface for controlling the High Availability"
+          ; "(HA) monitoring service."
+          ]
+      }
+  let implementation = R.implement description
+
   let enable_and_update = R.declare
       "enable_and_update"
       ["enable_and_update"]
@@ -549,13 +576,4 @@ module HA (R: Idl.RPC) = struct
       ["disable"]
       R.(T.unit @-> returning T.unit rpc_error)
 
-  let interface = R.describe
-      Idl.Interface.
-        { name = "HA"
-        ; version = (1,0,0)
-        ; description =
-            [ "This is the interface for controlling the High Availability"
-            ; "(HA) monitoring service."
-            ]
-        }
 end
