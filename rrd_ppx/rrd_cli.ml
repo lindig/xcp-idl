@@ -32,7 +32,11 @@ let rpc queue (call:Rpc.call) : Rpc.response =
   if !Xcp_client.use_switch then
     Xcp_client.json_switch_rpc queue call
   else
-    failwith "Message switch not configured"
+    Xcp_client.xml_http_rpc
+      ~srcstr:(Xcp_client.get_user_agent ())
+      ~dststr:"rrd"
+      Rrd_idl.uri
+      call
 
 module CMD = struct
   let main =
