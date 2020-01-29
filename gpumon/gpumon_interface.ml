@@ -129,6 +129,9 @@ module RPC_API(R : RPC) = struct
 
     (** common API call parameters *)
 
+    let unit_p = param Types.unit
+    let bool_p = param Types.bool
+
     let debug_info_p = param ~description:
         ["Uninterpreted string used for debugging."]
         debug_info
@@ -202,5 +205,23 @@ module RPC_API(R : RPC) = struct
           @-> nvidia_pgpu_metadata_p
           @-> nvidia_vgpu_metadata_list_p
           @-> returning compatibility_p gpu_err)
+
+    let nvml_attach =
+      declare "nvml_attach"
+        ["Attach nVidia cards to Gpumon for metrics and compatibility checking."
+        ]
+        ( debug_info_p @-> returning unit_p gpu_err)
+
+    let nvml_detach =
+      declare "nvml_deattach"
+        ["Detach nVidia cards to Gpumon for metrics and compatibility checking."
+        ]
+        ( debug_info_p @-> returning unit_p gpu_err)
+
+    let nvml_is_attached =
+      declare "nvml_is_attached"
+        ["Return true if nVidia cards are currently attached."
+        ]
+        ( debug_info_p @-> returning bool_p gpu_err)
   end
 end
